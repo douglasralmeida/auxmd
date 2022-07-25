@@ -6,7 +6,8 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls,
-  ActnList, SynEdit, Generics.Collections, SynEditTypes;
+  ActnList, ButtonPanel, Buttons, Menus, SynEdit, Generics.Collections,
+  SynEditTypes;
 
 type
   { TModoGeracao }
@@ -14,29 +15,70 @@ type
 
   { TJanelaPadrao }
   TJanelaPadrao = class(TForm)
-    ListaAcoes: TActionList;
-    BtoColar: TButton;
+    EditorLimpar: TAction;
+    EditorColar: TAction;
+    EditorRecortar: TAction;
+    EditorSelecionarTudo: TAction;
+    EditorCopiar: TAction;
+    EditorDesfazer: TAction;
     BtoAbrir: TButton;
-    BtoSalvar: TButton;
+    btoEditarVar: TButton;
+    BtoColar: TButton;
+    btoGerarCadastro: TButton;
+    btoGerarApuracao: TButton;
+    Editor: TSynEdit;
+    editPosicaoColuna: TEdit;
+    editMaximoItens: TEdit;
+    editTextoPersonalizado: TEdit;
+    editSeparadorNome: TEdit;
     Image1: TImage;
     Image2: TImage;
     Image3: TImage;
+    Image4: TImage;
     Label1: TLabel;
+    Label10: TLabel;
+    Label11: TLabel;
+    Label12: TLabel;
     Label2: TLabel;
     Label3: TLabel;
     Label4: TLabel;
     Label5: TLabel;
     Label6: TLabel;
+    Label7: TLabel;
+    Label8: TLabel;
+    Label9: TLabel;
+    ListaAcoes: TActionList;
     DialogoAbrir: TOpenDialog;
-    RadioCadastrar: TRadioButton;
-    RadioIniciar: TRadioButton;
     DialogoSalvar: TSaveDialog;
-    Editor: TSynEdit;
     DialogoMsg: TTaskDialog;
+    MenuItem1: TMenuItem;
+    MenuItem2: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    MenuItem5: TMenuItem;
+    MenuItem6: TMenuItem;
+    Separator2: TMenuItem;
+    Separator1: TMenuItem;
+    painelPersonalizarColunas: TPanel;
+    painelPersonalizarColunas1: TPanel;
+    CaixaRolagem: TScrollBox;
+    btoAtivarTextoPersonalizado: TToggleBox;
+    btoDesativarTextoPersonalizado: TToggleBox;
+    EditorMenu: TPopupMenu;
+    ToggleBox3: TToggleBox;
+    ToggleBox4: TToggleBox;
     procedure BtoAbrirClick(Sender: TObject);
+    procedure btoAtivarTextoPersonalizadoChange(Sender: TObject);
     procedure BtoColarClick(Sender: TObject);
-    procedure BtoSalvarClick(Sender: TObject);
+    procedure btoDesativarTextoPersonalizadoChange(Sender: TObject);
+    procedure btoGerarCadastroClick(Sender: TObject);
+    procedure CaixaRolagemClick(Sender: TObject);
     procedure EditorChange(Sender: TObject);
+    procedure EditorColarExecute(Sender: TObject);
+    procedure EditorCopiarExecute(Sender: TObject);
+    procedure EditorDesfazerExecute(Sender: TObject);
+    procedure EditorRecortarExecute(Sender: TObject);
+    procedure EditorSelecionarTudoExecute(Sender: TObject);
     procedure EditorSpecialLineColors(Sender: TObject; Line: integer;
       var Special: boolean; var FG, BG: TColor);
     procedure FormCreate(Sender: TObject);
@@ -144,14 +186,19 @@ begin
   ProcessarTexto;
 end;
 
-procedure TJanelaPadrao.BtoSalvarClick(Sender: TObject);
+procedure TJanelaPadrao.btoDesativarTextoPersonalizadoChange(Sender: TObject);
+begin
+    btoAtivarTextoPersonalizado.State := cbChecked;
+end;
+
+procedure TJanelaPadrao.btoGerarCadastroClick(Sender: TObject);
 begin
   if ChecarTexto then
-    if RadioCadastrar.Checked or RadioIniciar.Checked then
+//    if RadioCadastrar.Checked or RadioIniciar.Checked then
     begin
-       if RadioCadastrar.Checked then
-         ModoGeracao := mgCadastrar
-       else
+ //      if RadioCadastrar.Checked then
+         ModoGeracao := mgCadastrar;
+//       else
          ModoGeracao := mgIniciarApuracao;
       if DialogoSalvar.Execute then
       begin
@@ -165,14 +212,44 @@ begin
     begin
       ExibirErro('O formato de saída do arquivo CSV não foi escolhido.',
                     'Escolha o formato de saída e tente salvar o arquivo novamente.');
-      if RadioCadastrar.CanFocus then
-        RadioCadastrar.SetFocus;
+//      if RadioCadastrar.CanFocus then
+//        RadioCadastrar.SetFocus;
     end;
+end;
+
+procedure TJanelaPadrao.CaixaRolagemClick(Sender: TObject);
+begin
+
 end;
 
 procedure TJanelaPadrao.EditorChange(Sender: TObject);
 begin
   AnalisarTexto;
+end;
+
+procedure TJanelaPadrao.EditorColarExecute(Sender: TObject);
+begin
+  Editor.PasteFromClipboard();
+end;
+
+procedure TJanelaPadrao.EditorCopiarExecute(Sender: TObject);
+begin
+  Editor.CopyToClipboard;
+end;
+
+procedure TJanelaPadrao.EditorDesfazerExecute(Sender: TObject);
+begin
+  Editor.Undo;
+end;
+
+procedure TJanelaPadrao.EditorRecortarExecute(Sender: TObject);
+begin
+    Editor.CutToClipboard;
+end;
+
+procedure TJanelaPadrao.EditorSelecionarTudoExecute(Sender: TObject);
+begin
+  Editor.SelectAll;
 end;
 
 procedure TJanelaPadrao.BtoAbrirClick(Sender: TObject);
@@ -186,11 +263,16 @@ begin
      end;
 end;
 
+procedure TJanelaPadrao.btoAtivarTextoPersonalizadoChange(Sender: TObject);
+begin
+  btoDesativarTextoPersonalizado.State := cbUnchecked;
+end;
+
 procedure TJanelaPadrao.ProcessarTexto;
 var
   I: Integer;
 begin
-  //Apaga todos os caracteres ESPAÇOS, '.' e '-' do texto
+  //Apaga todos os caracteres ESPAÇO, '.' e '-' do texto
   Editor.SearchReplaceEx('-', '', [ssoReplaceAll], TPoint.Create(0, 0));
   Editor.SearchReplaceEx('.', '', [ssoReplaceAll], TPoint.Create(0, 0));
   Editor.SearchReplaceEx(' ', '', [ssoReplaceAll], TPoint.Create(0, 0));
@@ -204,31 +286,6 @@ begin
       Editor.Lines[i] := Editor.Lines[i].PadLeft(10, '0');
   end;
 end;
-
-{
-procedure TJanelaPadrao.SalvarComoCSV(NomeArquivo: String);
-var
-  I: Integer;
-  Linhas: Integer;
-  TextoCSV: TStringStream;
-begin
-  TextoCSV := TFileStream.Create(NomeArquivo, fmCreate);
-  try
-     Linhas := Editor.Lines.Count;
-     TextoCSV.Write(Cabecalho, Cabecalho.Length);
-     //TextoCSV.Write(#13#10, 2);
-     for I := 0 to Linhas - 1 do
-     begin
-       TextoCSV.Write(Editor.Lines[i].Trim);
-       TextoCSV.Write(Complemento, Complemento.Length);
-       //if i < Linhas - 1 then
-       //TextoCSV.Write(#13#10, 2);
-     end;
-  finally
-    TextoCSV.Free;
-  end;
-end;
-}
 
 procedure TJanelaPadrao.SalvarComoCSV(NomeArquivo: String);
 var
