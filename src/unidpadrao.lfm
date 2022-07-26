@@ -6860,7 +6860,6 @@ object JanelaPadrao: TJanelaPadrao
     ClientHeight = 816
     ClientWidth = 600
     TabOrder = 0
-    OnClick = CaixaRolagemClick
     object Image3: TImage
       Left = 8
       Height = 64
@@ -7646,7 +7645,7 @@ object JanelaPadrao: TJanelaPadrao
       ParentFont = False
     end
     object btoGerarCadastro: TButton
-      Left = 88
+      Left = 87
       Height = 28
       Top = 780
       Width = 179
@@ -7850,7 +7849,6 @@ object JanelaPadrao: TJanelaPadrao
     Caption = 'Novo modelo'
     ShowCaptions = True
     TabOrder = 1
-    OnClick = ToolBar1Click
     object btoNovoModelo: TToolButton
       Left = 1
       Top = 2

@@ -75,11 +75,9 @@ type
     procedure BtoAbrirClick(Sender: TObject);
     procedure btoAtivarTextoPersonalizadoChange(Sender: TObject);
     procedure BtoColarClick(Sender: TObject);
-    procedure btoDesativarTextoPersonalizadoChange(Sender: TObject);
     procedure btoEditarVarClick(Sender: TObject);
     procedure btoGerarApuracaoClick(Sender: TObject);
     procedure btoGerarCadastroClick(Sender: TObject);
-    procedure CaixaRolagemClick(Sender: TObject);
     procedure EditorChange(Sender: TObject);
     procedure EditorColarExecute(Sender: TObject);
     procedure EditorCopiarExecute(Sender: TObject);
@@ -90,10 +88,8 @@ type
       var Special: boolean; var FG, BG: TColor);
     procedure FormCreate(Sender: TObject);
     procedure btoAtivarLimiteMaximoChange(Sender: TObject);
-    procedure btoDesativarLimiteMaximoChange(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure NotificadorTimerTimer(Sender: TObject);
-    procedure ToolBar1Click(Sender: TObject);
   private
     ListaErros: TList<Integer>;
     ListaVariaveis: TStringList;
@@ -103,13 +99,16 @@ type
     MaximoItens: Integer;
     SeparadorNomeArquivo: String;
     UsarTextoPersonalizado: Boolean;
+    UsarMaximoItens: Boolean;
     procedure AnalisarTexto;
     procedure CarregarTexto(NomeArquivo: String);
     function ChecarTexto: Boolean;
     function ChecarForm: Boolean;
     procedure ExibirErro(Msg: String; Detalhes: String);
     procedure ExibirNotificacao(Msg: String);
+    function ExibirPergunta(Msg: String; Opcoes: Array of String): Integer;
     function ObterTextoPersonalizado(Texto: String; Pos: Integer): String;
+    procedure ProcessarSalvamento;
     procedure ProcessarTexto;
     procedure SalvarComoCSV(NomeArquivo: String);
     procedure SalvarComoTexto(NomeArquivo: String);
@@ -191,7 +190,11 @@ begin
 end;
 
 function TJanelaPadrao.ChecarForm: Boolean;
+var
+  TotalItens: Integer;
+  TotalItensPorArquivo: Integer;
 begin
+  //Oções para coluna com texto personalizado
   if btoAtivarTextoPersonalizado.Checked then
   begin
     if Trim(editPosicaoColuna.Text).Length = 0 then
@@ -202,7 +205,7 @@ begin
     end;
     if StrToInt(editPosicaoColuna.Text) <= 0 then
     begin
-      ExibirErro('A coluna com texto personalizado foi atividada, mas o campo Posição da Coluna está com um valor negativo.',
+      ExibirErro('A coluna com texto personalizado foi atividada, mas o campo Posição da Coluna possui um valor não positivo.',
                     'Corrija o valor do campo tente gerar a tabela novamente.');
       Exit(False);
     end;
@@ -213,6 +216,8 @@ begin
             Exit(False);
     end;
   end;
+
+  //Opções para limite máximo
   if btoAtivarLimiteMaximo.Checked then
   begin
     if Trim(editMaximoItens.Text).Length = 0 then
@@ -223,10 +228,18 @@ begin
     end;
     if StrToInt(editMaximoItens.Text) <= 0 then
     begin
-      ExibirErro('O limite máximo de itens foi ativado, mas o campo Máximo de Itens por Arquivo está com um valor negativo.',
+      ExibirErro('O limite máximo de itens foi ativado, mas o campo Máximo de Itens por Arquivo poaaui um valor não positivo.',
                     'Corrija o valor do campo tente gerar a tabela novamente.');
       Exit(False);
     end;
+
+    //Aviso sobre quantidade de arquivos (>20)
+    TotalItens := Editor.Lines.Count;
+    TotalItensPorArquivo := Trunc(TotalItens / StrToInt(editMaximoItens.Text));
+
+    if TotalItensPorArquivo > 20 then
+      if ExibirPergunta(Format('Sua configuração para geração de tabelas irá resultar em %d arquivos. Você tem certeza que deseja continuar?', [TotalItensPorArquivo]), ['Sim, gerar a tabela.', 'Não, corrigir o número máximo de itens por arquivo.']) > 0 then
+        Exit(False);
   end;
   Result := True;
 end;
@@ -244,6 +257,10 @@ end;
 
 procedure TJanelaPadrao.ExibirErro(Msg: String; Detalhes: String);
 begin
+  DialogoMsg.Buttons.Clear;
+  DialogoMsg.Caption := 'Erro';
+  DialogoMsg.CommonButtons := [tcbOk];
+  DialogoMsg.MainIcon := tdiError;
   DialogoMsg.Title := Msg;
   DialogoMsg.Text := Detalhes;
   DialogoMsg.Execute;
@@ -254,6 +271,30 @@ begin
   painelMensagem.Caption := Msg;
   painelMensagem.Show;
   NotificadorTimer.Enabled := True;
+end;
+
+function TJanelaPadrao.ExibirPergunta(Msg: String; Opcoes: Array of String): Integer;
+var
+  I,
+  NumBotoes: Integer;
+  Botao: TTaskDialogBaseButtonItem;
+begin
+  DialogoMsg.Buttons.Clear;
+  NumBotoes := Length(Opcoes);
+  DialogoMsg.Caption := 'Pergunta';
+  DialogoMsg.CommonButtons := [];
+  DialogoMsg.MainIcon := tdiQuestion;
+  DialogoMsg.Title := Msg;
+  DialogoMsg.Text := '';
+  for I := 0 to NumBotoes - 1 do
+  begin
+    Botao := DialogoMsg.Buttons.Add;
+    Botao.Caption := Opcoes[I];
+    Botao.Default := I = 0;
+    Botao.ModalResult := TModalResult(I);
+  end;
+  if DialogoMsg.Execute then
+    Result := Ord(DialogoMsg.ModalResult);
 end;
 
 procedure TJanelaPadrao.FormCreate(Sender: TObject);
@@ -271,11 +312,6 @@ begin
   painelLimiteMaximo.Enabled := btoAtivarLimiteMaximo.Checked;
 end;
 
-procedure TJanelaPadrao.btoDesativarLimiteMaximoChange(Sender: TObject);
-begin
-
-end;
-
 procedure TJanelaPadrao.FormDestroy(Sender: TObject);
 begin
   if ListaVariaveis <> nil then
@@ -290,21 +326,12 @@ begin
   painelMensagem.Hide;
 end;
 
-procedure TJanelaPadrao.ToolBar1Click(Sender: TObject);
-begin
-
-end;
-
 procedure TJanelaPadrao.BtoColarClick(Sender: TObject);
 begin
   Editor.PasteFromClipboard();
   ProcessarTexto;
 end;
 
-procedure TJanelaPadrao.btoDesativarTextoPersonalizadoChange(Sender: TObject);
-begin
-
-end;
 
 procedure TJanelaPadrao.btoEditarVarClick(Sender: TObject);
 begin
@@ -326,10 +353,8 @@ end;
 procedure TJanelaPadrao.btoGerarApuracaoClick(Sender: TObject);
 begin
   ModoGeracao := mgIniciarApuracao;
-  PosicaoColuna := StrToInt(editPosicaoColuna.Text) - 1;
-  TextoPersonalizado := editTextoPersonalizado.Text;
-  MaximoItens := StrToInt(editMaximoItens.Text);
-  SeparadorNomeArquivo := editSeparadorNome.Text;
+  UsarTextoPersonalizado := btoAtivarTextoPersonalizado.State = cbChecked;
+  ProcessarSalvamento;
 end;
 
 procedure TJanelaPadrao.btoGerarCadastroClick(Sender: TObject);
@@ -337,30 +362,9 @@ begin
   if ChecarTexto and ChecarForm then
   begin
     ModoGeracao := mgCadastrar;
-    UsarTextoPersonalizado := btoAtivarTextoPersonalizado.State = cbChecked;
-    if Length(editPosicaoColuna.Text) > 0 then
-      PosicaoColuna := StrToInt(editPosicaoColuna.Text) - 1
-    else
-      PosicaoColuna := 0;
-    TextoPersonalizado := editTextoPersonalizado.Text;
-    if Length(editMaximoItens.Text) > 0 then
-      MaximoItens := StrToInt(editMaximoItens.Text)
-    else
-      MaximoItens := 0;
-    SeparadorNomeArquivo := editSeparadorNome.Text;
-    if DialogoSalvar.Execute then
-    begin
-      if LowerCase(ExtractFileExt(DialogoSalvar.FileName)) = '.csv' then
-        SalvarComoCSV(DialogoSalvar.FileName)
-      else
-        SalvarComoTexto(DialogoSalvar.FileName);
-    end;
+    UsarTextoPersonalizado := False;
+    ProcessarSalvamento;
   end;
-end;
-
-procedure TJanelaPadrao.CaixaRolagemClick(Sender: TObject);
-begin
-
 end;
 
 procedure TJanelaPadrao.EditorChange(Sender: TObject);
@@ -429,6 +433,34 @@ begin
   Result := TextoNormalizado;
 end;
 
+procedure TJanelaPadrao.ProcessarSalvamento;
+begin
+  UsarMaximoItens := btoAtivarLimiteMaximo.State = cbChecked;
+
+  //verifica se há texto no campo Posição da coluna
+  if Length(editPosicaoColuna.Text) > 0 then
+    PosicaoColuna := StrToInt(editPosicaoColuna.Text) - 1
+  else
+    PosicaoColuna := 0;
+  TextoPersonalizado := editTextoPersonalizado.Text;
+
+  //verifica se há texto no campo Máximo de Itens
+  if Length(editMaximoItens.Text) > 0 then
+    MaximoItens := StrToInt(editMaximoItens.Text)
+  else
+    MaximoItens := 1;
+  SeparadorNomeArquivo := editSeparadorNome.Text;
+
+  //executa a caixa de diálogo
+  if DialogoSalvar.Execute then
+  begin
+    if LowerCase(ExtractFileExt(DialogoSalvar.FileName)) = '.csv' then
+      SalvarComoCSV(DialogoSalvar.FileName)
+    else
+      SalvarComoTexto(DialogoSalvar.FileName);
+  end;
+end;
+
 procedure TJanelaPadrao.ProcessarTexto;
 var
   I: Integer;
@@ -470,6 +502,13 @@ begin
   TotalColunas := Length(Cabecalho);
   TotalLinhas := Editor.Lines.Count + 1;
   DocumentoCSV := TCSVData.Create(TotalLinhas, TotalColunas);
+  if UsarMaximoItens then
+  begin
+    DocumentoCSV.MaxRowsPerFile := MaximoItens;
+    DocumentoCSV.SeparatorInFileName := SeparadorNomeArquivo;
+  end
+  else
+    DocumentoCSV.MaxRowsPerFile := 0;
   try
     DocumentoCSV.DelimiterChar := ';';
 

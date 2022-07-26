@@ -19,8 +19,11 @@ type
     FColsCount: Integer;
     FData: TValuesData;
     FDelimiterChar: Char;
+    FMaxRowsPerFile: Integer;
     FRowsCount: Integer;
+    FSeparatorInFileName: String;
     FSpecialChars: TSysCharSet;
+    procedure DoSaveData(ARow: Integer; AMaxRows: Integer; const AFileName: String);
     function  GetCellValue(ARow: Integer; ACol: Integer): String;
     procedure SetCellValue(ARow: Integer; ACol: Integer; const AValue: String);
     procedure SetDelimiterChar(const AValue: Char);
@@ -31,15 +34,22 @@ type
     procedure SaveToFile(const AFilename: String);
     property DelimiterChar: Char read FDelimiterChar write SetDelimiterChar;
     property CellValue[ARow, ACol: Integer]: String read GetCellValue write SetCellValue;
+    property MaxRowsPerFile: Integer read FMaxRowsPerFile write FMaxRowsPerFile;
+    property RowsCount: Integer read FRowsCount write FRowsCount;
+    property SeparatorInFileName: String read FSeparatorInFileName write FSeparatorInFileName;
   end;
 
 implementation
+
+uses LazFileUtils;
 
 constructor TCSVData.Create;
 begin
   inherited Create;
   FColsCount := 0;
   FDelimiterChar := ',';
+  FMaxRowsPerFile := 0;
+  FSeparatorInFileName := '_';
   FRowsCount := 0;
 end;
 
@@ -68,7 +78,7 @@ begin
     raise Exception.Create('Linha ou coluna informados além da capacidade da matriz.');
 end;
 
-procedure TCSVData.SaveToFile(const AFilename: String);
+procedure TCSVData.DoSaveData(ARow: Integer; AMaxRows: Integer; const AFileName: String);
 var
   I, J: Integer;
   Length: Integer;
@@ -76,7 +86,7 @@ var
 begin
  FileStream := TFileStream.Create(AFilename, fmCreate);
  try
-   for I := 0 to FRowsCount - 1 do
+   for I := 0 to AMaxRows - 1 do
    begin
      for J := 0 to FColsCount - 1 do
      begin
@@ -92,6 +102,38 @@ begin
   finally
     FileStream.Free;
   end;
+end;
+
+procedure TCSVData.SaveToFile(const AFilename: String);
+var
+  I, J: Integer;
+  NumOfRows: Integer;
+  TempFileName: String;
+  TempFileExt: String;
+  TempFile: String;
+begin
+  I := 0;
+  J := 0;
+  TempFileExt := ExtractFileExt(AFileName);
+  TempFileName := ExtractFileNameWithoutExt(AFileName);
+  if FMaxRowsPerFile > 0 then
+    NumOfRows := FMaxRowsPerFile
+  else
+  begin
+    NumOfRows := FRowsCount;
+    TempFile := AFileName;
+  end;
+  repeat
+  begin
+    if FMaxRowsPerFile > 0 then
+    begin
+      TempFile := TempFileName + FSeparatorInFileName + IntToStr(J) +  TempFileExt;
+      Inc(J);
+    end;
+    DoSaveData(0, NumOfRows, TempFile);
+    Inc(I, NumOfRows);
+  end;
+  until I < FRowsCount;
 end;
 
 procedure TCSVData.SetCellValue(ARow: Integer; ACol: Integer; const AValue: String);
