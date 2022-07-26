@@ -1,11 +1,11 @@
 object JanelaPadrao: TJanelaPadrao
-  Left = 660
-  Height = 826
-  Top = 140
+  Left = 600
+  Height = 868
+  Top = 108
   Width = 600
   BorderIcons = [biSystemMenu, biMinimize]
   Caption = 'Auxiliar do Mobdigital (BETA)'
-  ClientHeight = 826
+  ClientHeight = 868
   ClientWidth = 600
   Font.Height = -13
   Icon.Data = {
@@ -6845,18 +6845,19 @@ object JanelaPadrao: TJanelaPadrao
     00BFC30000
   }
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   Position = poScreenCenter
-  LCLVersion = '2.2.0.4'
+  LCLVersion = '2.2.2.0'
   object CaixaRolagem: TScrollBox
     Left = 0
-    Height = 826
-    Top = 0
+    Height = 816
+    Top = 52
     Width = 600
     HorzScrollBar.Page = 578
     VertScrollBar.Page = 808
     Align = alClient
     BorderStyle = bsNone
-    ClientHeight = 826
+    ClientHeight = 816
     ClientWidth = 600
     TabOrder = 0
     OnClick = CaixaRolagemClick
@@ -7097,6 +7098,7 @@ object JanelaPadrao: TJanelaPadrao
       Caption = 'Cole a lista de benefícios no campo abaixo ou carregue-a de um arquivo texto:'
       Font.Height = -13
       Font.Style = [fsBold]
+      ParentColor = False
       ParentFont = False
       WordWrap = True
     end
@@ -7629,6 +7631,7 @@ object JanelaPadrao: TJanelaPadrao
       Caption = 'Adicione colunas com texto personalizado:'
       Font.Height = -13
       Font.Style = [fsBold]
+      ParentColor = False
       ParentFont = False
     end
     object Label6: TLabel
@@ -7639,6 +7642,7 @@ object JanelaPadrao: TJanelaPadrao
       Caption = 'Gere o arquivo CSV e salve-o para importação no Mobdigital.'
       Font.Height = -13
       Font.Style = [fsBold]
+      ParentColor = False
       ParentFont = False
     end
     object btoGerarCadastro: TButton
@@ -7648,7 +7652,7 @@ object JanelaPadrao: TJanelaPadrao
       Width = 179
       Caption = '&Gerar tabela para cadastro'
       OnClick = btoGerarCadastroClick
-      TabOrder = 9
+      TabOrder = 7
     end
     object btoGerarApuracao: TButton
       Left = 280
@@ -7656,8 +7660,8 @@ object JanelaPadrao: TJanelaPadrao
       Top = 780
       Width = 232
       Caption = 'Ge&rar tabela para iniciar apuração'
-      OnClick = btoGerarCadastroClick
-      TabOrder = 10
+      OnClick = btoGerarApuracaoClick
+      TabOrder = 8
     end
     object Label8: TLabel
       Left = 80
@@ -7667,6 +7671,7 @@ object JanelaPadrao: TJanelaPadrao
       Caption = 'Defina o limite máximo de itens por arquivo:'
       Font.Height = -13
       Font.Style = [fsBold]
+      ParentColor = False
       ParentFont = False
     end
     object painelPersonalizarColunas: TPanel
@@ -7677,7 +7682,8 @@ object JanelaPadrao: TJanelaPadrao
       BevelOuter = bvNone
       ClientHeight = 120
       ClientWidth = 496
-      TabOrder = 5
+      Enabled = False
+      TabOrder = 4
       object editPosicaoColuna: TEdit
         Left = 160
         Height = 25
@@ -7685,6 +7691,7 @@ object JanelaPadrao: TJanelaPadrao
         Width = 104
         NumbersOnly = True
         TabOrder = 0
+        Text = '0'
       end
       object Label9: TLabel
         Left = 16
@@ -7693,6 +7700,7 @@ object JanelaPadrao: TJanelaPadrao
         Width = 109
         Caption = '&Posição da coluna:'
         FocusControl = editPosicaoColuna
+        ParentColor = False
       end
       object editTextoPersonalizado: TEdit
         Left = 160
@@ -7708,6 +7716,7 @@ object JanelaPadrao: TJanelaPadrao
         Width = 121
         Caption = '&Texto personalizado:'
         FocusControl = editTextoPersonalizado
+        ParentColor = False
       end
       object btoEditarVar: TButton
         Left = 16
@@ -7715,10 +7724,12 @@ object JanelaPadrao: TJanelaPadrao
         Top = 80
         Width = 115
         Caption = '&Editar variáveis...'
+        Enabled = False
+        OnClick = btoEditarVarClick
         TabOrder = 2
       end
     end
-    object painelPersonalizarColunas1: TPanel
+    object painelLimiteMaximo: TPanel
       Left = 80
       Height = 68
       Top = 672
@@ -7726,7 +7737,8 @@ object JanelaPadrao: TJanelaPadrao
       BevelOuter = bvNone
       ClientHeight = 68
       ClientWidth = 496
-      TabOrder = 8
+      Enabled = False
+      TabOrder = 6
       object editMaximoItens: TEdit
         Left = 216
         Height = 25
@@ -7734,6 +7746,7 @@ object JanelaPadrao: TJanelaPadrao
         Width = 104
         NumbersOnly = True
         TabOrder = 0
+        Text = '0'
       end
       object Label11: TLabel
         Left = 16
@@ -7742,6 +7755,7 @@ object JanelaPadrao: TJanelaPadrao
         Width = 168
         Caption = '&Máximo de itens por aquivo:'
         FocusControl = editMaximoItens
+        ParentColor = False
       end
       object editSeparadorNome: TEdit
         Left = 216
@@ -7749,6 +7763,7 @@ object JanelaPadrao: TJanelaPadrao
         Top = 40
         Width = 104
         TabOrder = 1
+        Text = '_'
       end
       object Label12: TLabel
         Left = 16
@@ -7757,45 +7772,26 @@ object JanelaPadrao: TJanelaPadrao
         Width = 189
         Caption = 'Se&parador do nome de arquivo:'
         FocusControl = editSeparadorNome
+        ParentColor = False
       end
     end
     object btoAtivarTextoPersonalizado: TToggleBox
       Left = 384
       Height = 25
       Top = 428
-      Width = 75
+      Width = 83
       Caption = 'A&tivar'
       OnChange = btoAtivarTextoPersonalizadoChange
       TabOrder = 3
     end
-    object btoDesativarTextoPersonalizado: TToggleBox
-      Left = 458
-      Height = 25
-      Top = 428
-      Width = 75
-      Caption = '&Desativar'
-      Checked = True
-      OnChange = btoDesativarTextoPersonalizadoChange
-      State = cbChecked
-      TabOrder = 4
-    end
-    object ToggleBox3: TToggleBox
-      Left = 400
+    object btoAtivarLimiteMaximo: TToggleBox
+      Left = 384
       Height = 25
       Top = 628
       Width = 75
       Caption = 'At&ivar'
-      TabOrder = 6
-    end
-    object ToggleBox4: TToggleBox
-      Left = 474
-      Height = 25
-      Top = 628
-      Width = 75
-      Caption = 'De&sativar'
-      Checked = True
-      State = cbChecked
-      TabOrder = 7
+      OnChange = btoAtivarLimiteMaximoChange
+      TabOrder = 5
     end
     object Label2: TLabel
       Left = 33
@@ -7806,6 +7802,7 @@ object JanelaPadrao: TJanelaPadrao
       Font.Color = clWhite
       Font.Height = -32
       Font.Style = [fsBold]
+      ParentColor = False
       ParentFont = False
     end
     object Label3: TLabel
@@ -7817,6 +7814,7 @@ object JanelaPadrao: TJanelaPadrao
       Font.Color = clWhite
       Font.Height = -32
       Font.Style = [fsBold]
+      ParentColor = False
       ParentFont = False
     end
     object Label7: TLabel
@@ -7828,6 +7826,7 @@ object JanelaPadrao: TJanelaPadrao
       Font.Color = clWhite
       Font.Height = -32
       Font.Style = [fsBold]
+      ParentColor = False
       ParentFont = False
     end
     object Label5: TLabel
@@ -7839,8 +7838,61 @@ object JanelaPadrao: TJanelaPadrao
       Font.Color = clWhite
       Font.Height = -32
       Font.Style = [fsBold]
+      ParentColor = False
       ParentFont = False
     end
+  end
+  object ToolBar1: TToolBar
+    Left = 0
+    Height = 26
+    Top = 0
+    Width = 600
+    Caption = 'Novo modelo'
+    ShowCaptions = True
+    TabOrder = 1
+    OnClick = ToolBar1Click
+    object btoNovoModelo: TToolButton
+      Left = 1
+      Top = 2
+      Caption = 'Novo modelo'
+    end
+    object btoAbrirModelo: TToolButton
+      Left = 90
+      Top = 2
+      Caption = 'Abrir modelo'
+    end
+    object btoSalvarModelo: TToolButton
+      Left = 176
+      Top = 2
+      Caption = 'Salvar modelo'
+    end
+    object ToolButton4: TToolButton
+      Left = 268
+      Height = 22
+      Top = 2
+      Caption = 'ToolButton4'
+      Style = tbsSeparator
+    end
+  end
+  object painelMensagem: TPanel
+    Left = 0
+    Height = 26
+    Top = 26
+    Width = 600
+    Align = alTop
+    BevelColor = clWhite
+    BevelInner = bvSpace
+    BevelOuter = bvNone
+    Caption = '<MSG>'
+    Color = clGreen
+    Font.Color = clWhite
+    Font.Height = -13
+    Font.Style = [fsBold]
+    ParentBackground = False
+    ParentColor = False
+    ParentFont = False
+    TabOrder = 2
+    Visible = False
   end
   object ListaAcoes: TActionList
     Left = 24
@@ -7920,5 +7972,12 @@ object JanelaPadrao: TJanelaPadrao
     object MenuItem5: TMenuItem
       Caption = '&Selecionar tudo'
     end
+  end
+  object NotificadorTimer: TTimer
+    Enabled = False
+    Interval = 10000
+    OnTimer = NotificadorTimerTimer
+    Left = 24
+    Top = 389
   end
 end

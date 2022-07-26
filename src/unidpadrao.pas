@@ -6,8 +6,8 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls,
-  ActnList, ButtonPanel, Buttons, Menus, SynEdit, Generics.Collections,
-  SynEditTypes;
+  ActnList, ButtonPanel, Buttons, Menus, ComCtrls, SynEdit, Types,
+  Generics.Collections, SynEditTypes;
 
 type
   { TModoGeracao }
@@ -57,20 +57,27 @@ type
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    painelMensagem: TPanel;
     Separator2: TMenuItem;
     Separator1: TMenuItem;
     painelPersonalizarColunas: TPanel;
-    painelPersonalizarColunas1: TPanel;
+    painelLimiteMaximo: TPanel;
     CaixaRolagem: TScrollBox;
     btoAtivarTextoPersonalizado: TToggleBox;
-    btoDesativarTextoPersonalizado: TToggleBox;
     EditorMenu: TPopupMenu;
-    ToggleBox3: TToggleBox;
-    ToggleBox4: TToggleBox;
+    btoAtivarLimiteMaximo: TToggleBox;
+    NotificadorTimer: TTimer;
+    ToolBar1: TToolBar;
+    btoNovoModelo: TToolButton;
+    btoAbrirModelo: TToolButton;
+    btoSalvarModelo: TToolButton;
+    ToolButton4: TToolButton;
     procedure BtoAbrirClick(Sender: TObject);
     procedure btoAtivarTextoPersonalizadoChange(Sender: TObject);
     procedure BtoColarClick(Sender: TObject);
     procedure btoDesativarTextoPersonalizadoChange(Sender: TObject);
+    procedure btoEditarVarClick(Sender: TObject);
+    procedure btoGerarApuracaoClick(Sender: TObject);
     procedure btoGerarCadastroClick(Sender: TObject);
     procedure CaixaRolagemClick(Sender: TObject);
     procedure EditorChange(Sender: TObject);
@@ -82,13 +89,27 @@ type
     procedure EditorSpecialLineColors(Sender: TObject; Line: integer;
       var Special: boolean; var FG, BG: TColor);
     procedure FormCreate(Sender: TObject);
+    procedure btoAtivarLimiteMaximoChange(Sender: TObject);
+    procedure btoDesativarLimiteMaximoChange(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure NotificadorTimerTimer(Sender: TObject);
+    procedure ToolBar1Click(Sender: TObject);
   private
     ListaErros: TList<Integer>;
+    ListaVariaveis: TStringList;
     ModoGeracao: TModoGeracao;
+    PosicaoColuna: Integer;
+    TextoPersonalizado: String;
+    MaximoItens: Integer;
+    SeparadorNomeArquivo: String;
+    UsarTextoPersonalizado: Boolean;
     procedure AnalisarTexto;
     procedure CarregarTexto(NomeArquivo: String);
     function ChecarTexto: Boolean;
+    function ChecarForm: Boolean;
     procedure ExibirErro(Msg: String; Detalhes: String);
+    procedure ExibirNotificacao(Msg: String);
+    function ObterTextoPersonalizado(Texto: String; Pos: Integer): String;
     procedure ProcessarTexto;
     procedure SalvarComoCSV(NomeArquivo: String);
     procedure SalvarComoTexto(NomeArquivo: String);
@@ -107,7 +128,7 @@ var
 implementation
 
 uses
-  LConvEncoding;
+  unidCSV, unidVariaveis, LConvEncoding;
 
 {$R *.lfm}
 
@@ -153,7 +174,60 @@ begin
 end;
 
 function TJanelaPadrao.ChecarTexto: Boolean;
+var
+  Texto: String;
 begin
+  if btoAtivarTextoPersonalizado.Checked then
+  begin
+    Texto := editTextoPersonalizado.Text;
+    if Texto.Contains('{}') and (Editor.Lines.Count <> ListaVariaveis.Count) then
+    begin
+      ExibirErro('A coluna com texto personalizado foi ativada com uso de variáveis, mas a quantidade de itens está diferente da quantidade de variáveis.',
+                          'Corrija as variáveis personalizadas e tente gerar a tabela novamente.');
+            Exit(False);
+    end;
+  end;
+  Result := True;
+end;
+
+function TJanelaPadrao.ChecarForm: Boolean;
+begin
+  if btoAtivarTextoPersonalizado.Checked then
+  begin
+    if Trim(editPosicaoColuna.Text).Length = 0 then
+    begin
+      ExibirErro('A coluna com texto personalizado foi ativada, mas a posição da coluna personalizada não foi informada.',
+                          'Informe o valor do campo tente gerar a tabela novamente.');
+            Exit(False);
+    end;
+    if StrToInt(editPosicaoColuna.Text) <= 0 then
+    begin
+      ExibirErro('A coluna com texto personalizado foi atividada, mas o campo Posição da Coluna está com um valor negativo.',
+                    'Corrija o valor do campo tente gerar a tabela novamente.');
+      Exit(False);
+    end;
+    if Trim(editTextoPersonalizado.Text).Length = 0 then
+    begin
+      ExibirErro('A coluna com texto personalizado foi ativada, mas o campo Texto Personalizado não foi informado.',
+                          'Informe o valor do campo tente gerar a tabela novamente.');
+            Exit(False);
+    end;
+  end;
+  if btoAtivarLimiteMaximo.Checked then
+  begin
+    if Trim(editMaximoItens.Text).Length = 0 then
+    begin
+      ExibirErro('O limite máximo de itens foi ativado, mas o campo Máximo de Itens Por Arquivo não foi informado.',
+                          'Informe o valor do campo tente gerar a tabela novamente.');
+            Exit(False);
+    end;
+    if StrToInt(editMaximoItens.Text) <= 0 then
+    begin
+      ExibirErro('O limite máximo de itens foi ativado, mas o campo Máximo de Itens por Arquivo está com um valor negativo.',
+                    'Corrija o valor do campo tente gerar a tabela novamente.');
+      Exit(False);
+    end;
+  end;
   Result := True;
 end;
 
@@ -175,9 +249,50 @@ begin
   DialogoMsg.Execute;
 end;
 
+procedure TJanelaPadrao.ExibirNotificacao(Msg: String);
+begin
+  painelMensagem.Caption := Msg;
+  painelMensagem.Show;
+  NotificadorTimer.Enabled := True;
+end;
+
 procedure TJanelaPadrao.FormCreate(Sender: TObject);
 begin
   ListaErros := TList<Integer>.Create;
+  ListaVariaveis := TStringList.Create;
+end;
+
+procedure TJanelaPadrao.btoAtivarLimiteMaximoChange(Sender: TObject);
+begin
+  if btoAtivarLimiteMaximo.Checked then
+    btoAtivarLimiteMaximo.Caption := 'Desat&ivar'
+  else
+    btoAtivarLimiteMaximo.Caption := 'At&ivar';
+  painelLimiteMaximo.Enabled := btoAtivarLimiteMaximo.Checked;
+end;
+
+procedure TJanelaPadrao.btoDesativarLimiteMaximoChange(Sender: TObject);
+begin
+
+end;
+
+procedure TJanelaPadrao.FormDestroy(Sender: TObject);
+begin
+  if ListaVariaveis <> nil then
+  begin
+    ListaVariaveis.Clear;
+    FreeAndNil(ListaVariaveis);
+  end;
+end;
+
+procedure TJanelaPadrao.NotificadorTimerTimer(Sender: TObject);
+begin
+  painelMensagem.Hide;
+end;
+
+procedure TJanelaPadrao.ToolBar1Click(Sender: TObject);
+begin
+
 end;
 
 procedure TJanelaPadrao.BtoColarClick(Sender: TObject);
@@ -188,33 +303,59 @@ end;
 
 procedure TJanelaPadrao.btoDesativarTextoPersonalizadoChange(Sender: TObject);
 begin
-    btoAtivarTextoPersonalizado.State := cbChecked;
+
+end;
+
+procedure TJanelaPadrao.btoEditarVarClick(Sender: TObject);
+begin
+  if FormVariaveis = nil then
+    FormVariaveis := TFormVariaveis.Create(nil);
+  try
+     FormVariaveis.ShowModal;
+     if FormVariaveis.ModalResult = mrOK then
+     begin
+       ListaVariaveis.Clear;
+       ListaVariaveis.AddStrings(FormVariaveis.Editor.Lines);
+     end;
+  finally
+    FormVariaveis.Free;
+    FormVariaveis := nil;
+  end;
+end;
+
+procedure TJanelaPadrao.btoGerarApuracaoClick(Sender: TObject);
+begin
+  ModoGeracao := mgIniciarApuracao;
+  PosicaoColuna := StrToInt(editPosicaoColuna.Text) - 1;
+  TextoPersonalizado := editTextoPersonalizado.Text;
+  MaximoItens := StrToInt(editMaximoItens.Text);
+  SeparadorNomeArquivo := editSeparadorNome.Text;
 end;
 
 procedure TJanelaPadrao.btoGerarCadastroClick(Sender: TObject);
 begin
-  if ChecarTexto then
-//    if RadioCadastrar.Checked or RadioIniciar.Checked then
-    begin
- //      if RadioCadastrar.Checked then
-         ModoGeracao := mgCadastrar;
-//       else
-         ModoGeracao := mgIniciarApuracao;
-      if DialogoSalvar.Execute then
-      begin
-        if LowerCase(ExtractFileExt(DialogoSalvar.FileName)) = '.csv' then
-          SalvarComoCSV(DialogoSalvar.FileName)
-        else
-          SalvarComoTexto(DialogoSalvar.FileName);
-      end;
-    end
+  if ChecarTexto and ChecarForm then
+  begin
+    ModoGeracao := mgCadastrar;
+    UsarTextoPersonalizado := btoAtivarTextoPersonalizado.State = cbChecked;
+    if Length(editPosicaoColuna.Text) > 0 then
+      PosicaoColuna := StrToInt(editPosicaoColuna.Text) - 1
     else
+      PosicaoColuna := 0;
+    TextoPersonalizado := editTextoPersonalizado.Text;
+    if Length(editMaximoItens.Text) > 0 then
+      MaximoItens := StrToInt(editMaximoItens.Text)
+    else
+      MaximoItens := 0;
+    SeparadorNomeArquivo := editSeparadorNome.Text;
+    if DialogoSalvar.Execute then
     begin
-      ExibirErro('O formato de saída do arquivo CSV não foi escolhido.',
-                    'Escolha o formato de saída e tente salvar o arquivo novamente.');
-//      if RadioCadastrar.CanFocus then
-//        RadioCadastrar.SetFocus;
+      if LowerCase(ExtractFileExt(DialogoSalvar.FileName)) = '.csv' then
+        SalvarComoCSV(DialogoSalvar.FileName)
+      else
+        SalvarComoTexto(DialogoSalvar.FileName);
     end;
+  end;
 end;
 
 procedure TJanelaPadrao.CaixaRolagemClick(Sender: TObject);
@@ -265,7 +406,27 @@ end;
 
 procedure TJanelaPadrao.btoAtivarTextoPersonalizadoChange(Sender: TObject);
 begin
-  btoDesativarTextoPersonalizado.State := cbUnchecked;
+  if btoAtivarTextoPersonalizado.Checked then
+  begin
+    btoAtivarTextoPersonalizado.Caption := 'Desa&tivar';
+  end
+  else
+  begin
+    btoAtivarTextoPersonalizado.Caption := 'A&tivar';
+  end;
+  painelPersonalizarColunas.Enabled :=  btoAtivarTextoPersonalizado.Checked;
+  btoEditarVar.Enabled :=  btoAtivarTextoPersonalizado.Checked;
+end;
+
+function TJanelaPadrao.ObterTextoPersonalizado(Texto: String; Pos: Integer): String;
+var
+  TextoNormalizado: String;
+begin
+  if UsarTextoPersonalizado and (ListaVariaveis.Count - 1 >= Pos) then
+    TextoNormalizado := Texto.Replace('{}', ListaVariaveis[Pos])
+  else
+    TextoNormalizado := Texto.Replace('{}', '');
+  Result := TextoNormalizado;
 end;
 
 procedure TJanelaPadrao.ProcessarTexto;
@@ -289,32 +450,57 @@ end;
 
 procedure TJanelaPadrao.SalvarComoCSV(NomeArquivo: String);
 var
-  Cabecalho: String;
-  Complemento: String;
+  I, J: Integer;
+  Cabecalho: TStringDynArray;
+  TotalLinhas: Integer;
+  TotalColunas: Integer;
   Linha: String;
-  TextoCSV: TStringList;
+  DocumentoCSV: TCSVData;
 begin
   case ModoGeracao of
     mgCadastrar:
       begin
-        Cabecalho := CabecalhoCadastrar;
-        Complemento := ComplementoCadastrar;
+        Cabecalho := CabecalhoCadastrar.Split(';');
       end;
     mgIniciarApuracao:
       begin
-        Cabecalho := CabecalhoIniciarApuracao;
-        Complemento := '';
+        Cabecalho := CabecalhoIniciarApuracao.Split(';');
       end;
   end;
-  TextoCSV := TStringList.Create;
-  TextoCSV.TrailingLineBreak := false;
+  TotalColunas := Length(Cabecalho);
+  TotalLinhas := Editor.Lines.Count + 1;
+  DocumentoCSV := TCSVData.Create(TotalLinhas, TotalColunas);
   try
-     TextoCSV.AddText(Cabecalho);
-     for Linha in Editor.Lines do
-       TextoCSV.AddText(Linha + Complemento);
-     TextoCSV.SaveToFile(NomeArquivo);
+    DocumentoCSV.DelimiterChar := ';';
+
+    //adiciona cabecalho
+    for I := 0 To TotalColunas - 1 do
+      DocumentoCSV.CellValue[0, I] := Cabecalho[I];
+
+     //adiciona os beneficios
+    I := 1;
+    J := 0;
+    for Linha in Editor.Lines do
+    begin
+      if Length(Trim(Linha)) = 0 then
+        Continue;
+      for J := 0 To TotalColunas - 1 do
+      begin
+        if J = 0 then
+          DocumentoCSV.CellValue[I, J] := Linha
+        else if J = PosicaoColuna then
+          DocumentoCSV.CellValue[I, J] := ObterTextoPersonalizado(TextoPersonalizado, I-1)
+        else
+          DocumentoCSV.CellValue[I, J] := '';
+       end;
+       Inc(I);
+     end;
+
+     //salva o arquivo CSV
+     DocumentoCSV.SaveToFile(NomeArquivo);
+     ExibirNotificacao('Tabela CSV gerada com sucesso.');
   finally
-    TextoCSV.Free;
+    DocumentoCSV.Free;
   end;
 end;
 
