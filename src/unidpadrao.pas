@@ -501,7 +501,7 @@ begin
   end;
   TotalColunas := Length(Cabecalho);
   TotalLinhas := Editor.Lines.Count + 1;
-  DocumentoCSV := TCSVData.Create(TotalLinhas, TotalColunas);
+  DocumentoCSV := TCSVData.Create(TotalLinhas, TotalColunas, True);
   if UsarMaximoItens then
   begin
     DocumentoCSV.MaxRowsPerFile := MaximoItens;

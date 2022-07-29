@@ -19,21 +19,24 @@ type
     FColsCount: Integer;
     FData: TValuesData;
     FDelimiterChar: Char;
+    FHasHeader: Boolean;
     FMaxRowsPerFile: Integer;
     FRowsCount: Integer;
     FSeparatorInFileName: String;
     FSpecialChars: TSysCharSet;
+    procedure DoSaveRow(Row: Integer; Stream: TFileStream);
     procedure DoSaveData(ARow: Integer; AMaxRows: Integer; const AFileName: String);
     function  GetCellValue(ARow: Integer; ACol: Integer): String;
     procedure SetCellValue(ARow: Integer; ACol: Integer; const AValue: String);
     procedure SetDelimiterChar(const AValue: Char);
   public
     constructor Create; virtual;
-    constructor Create(ARows, ACols: Integer);
+    constructor Create(ARows, ACols: Integer; AHasHeader: Boolean);
     procedure Assign(ASource: TPersistent); override;
     procedure SaveToFile(const AFilename: String);
     property DelimiterChar: Char read FDelimiterChar write SetDelimiterChar;
     property CellValue[ARow, ACol: Integer]: String read GetCellValue write SetCellValue;
+    property HasHeader: Boolean read FHasHeader write FHasHeader;
     property MaxRowsPerFile: Integer read FMaxRowsPerFile write FMaxRowsPerFile;
     property RowsCount: Integer read FRowsCount write FRowsCount;
     property SeparatorInFileName: String read FSeparatorInFileName write FSeparatorInFileName;
@@ -48,16 +51,18 @@ begin
   inherited Create;
   FColsCount := 0;
   FDelimiterChar := ',';
+  FHasHeader := False;
   FMaxRowsPerFile := 0;
   FSeparatorInFileName := '_';
   FRowsCount := 0;
 end;
 
-constructor TCSVData.Create(ARows, ACols: Integer);
+constructor TCSVData.Create(ARows, ACols: Integer; AHasHeader: Boolean);
 begin
   inherited Create;
   FRowsCount := ARows;
   FColsCount := ACols;
+  FHasHeader := AHasHeader;
 
   SetLength(FData, ARows, ACols);
 end;
@@ -78,26 +83,50 @@ begin
     raise Exception.Create('Linha ou coluna informados além da capacidade da matriz.');
 end;
 
+procedure TCSVData.DoSaveRow(Row: Integer; Stream: TFileStream);
+var
+  J, Length: Integer;
+begin
+ for J := 0 to FColsCount - 1 do
+ begin
+   Length := FData[Row, J].Length;
+   //the first byte of a Unicode string is a UTF-8 byte
+   if Length > 0 then
+     Stream.WriteBuffer(FData[Row, J][1], Length);
+   if J < FColsCount - 1 then
+     Stream.WriteBuffer(FDelimiterChar, SizeOf(Char));
+ end;
+end;
+
 procedure TCSVData.DoSaveData(ARow: Integer; AMaxRows: Integer; const AFileName: String);
 var
-  I, J: Integer;
-  Length: Integer;
+  I: Integer;
   FileStream: TFileStream;
+  AddedRow: Boolean;
 begin
- FileStream := TFileStream.Create(AFilename, fmCreate);
- try
-   for I := 0 to AMaxRows - 1 do
-   begin
-     for J := 0 to FColsCount - 1 do
-     begin
-       Length := FData[I, J].Length;
-       if Length > 0 then
-         FileStream.WriteBuffer(FData[I, J][1], Length);
-       if J < FColsCount - 1 then
-         FileStream.WriteBuffer(FDelimiterChar, SizeOf(Char));
-     end;
-     if I < FRowsCount - 1 then
-       FileStream.WriteBuffer(#13#10, SizeOf(Char) * 2);
+  FileStream := TFileStream.Create(AFilename, fmCreate);
+  AddedRow := False;
+  try
+    //includes header (line 0)
+    if FHasHeader then
+    begin
+      DoSaveRow(0, FileStream);
+      AddedRow := True;
+    end;
+
+    //includes data (line 1 until N-1)
+    for I := 0 to AMaxRows - 1 do
+    begin
+      if ARow + I < FRowsCount then
+      begin
+        if AddedRow then
+        begin
+          FileStream.WriteBuffer(#13#10, SizeOf(Char) * 2);
+          AddedRow := False;
+        end;
+        DoSaveRow(ARow + I, FileStream);
+        AddedRow := True;
+      end;
     end;
   finally
     FileStream.Free;
@@ -106,16 +135,20 @@ end;
 
 procedure TCSVData.SaveToFile(const AFilename: String);
 var
-  I, J: Integer;
+  I,
+  CurrentRow,
   NumOfRows: Integer;
   TempFileName: String;
   TempFileExt: String;
   TempFile: String;
 begin
-  I := 0;
-  J := 0;
+  I := 1;
   TempFileExt := ExtractFileExt(AFileName);
   TempFileName := ExtractFileNameWithoutExt(AFileName);
+  if FHasHeader then
+    CurrentRow := 1
+  else
+    CurrentRow := 0;
   if FMaxRowsPerFile > 0 then
     NumOfRows := FMaxRowsPerFile
   else
@@ -124,16 +157,14 @@ begin
     TempFile := AFileName;
   end;
   repeat
-  begin
     if FMaxRowsPerFile > 0 then
     begin
-      TempFile := TempFileName + FSeparatorInFileName + IntToStr(J) +  TempFileExt;
-      Inc(J);
+      TempFile := TempFileName + FSeparatorInFileName + IntToStr(I) +  TempFileExt;
+      Inc(I);
     end;
-    DoSaveData(0, NumOfRows, TempFile);
-    Inc(I, NumOfRows);
-  end;
-  until I < FRowsCount;
+    DoSaveData(CurrentRow, NumOfRows, TempFile);
+    Inc(CurrentRow, NumOfRows);
+  until CurrentRow >= FRowsCount;
 end;
 
 procedure TCSVData.SetCellValue(ARow: Integer; ACol: Integer; const AValue: String);
@@ -149,4 +180,3 @@ end;
 
 
 end.
-

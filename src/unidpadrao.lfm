@@ -1,11 +1,11 @@
 object JanelaPadrao: TJanelaPadrao
-  Left = 600
-  Height = 868
-  Top = 108
+  Left = 568
+  Height = 749
+  Top = 114
   Width = 600
   BorderIcons = [biSystemMenu, biMinimize]
   Caption = 'Auxiliar do Mobdigital (BETA)'
-  ClientHeight = 868
+  ClientHeight = 749
   ClientWidth = 600
   Font.Height = -13
   Icon.Data = {
@@ -6850,15 +6850,15 @@ object JanelaPadrao: TJanelaPadrao
   LCLVersion = '2.2.2.0'
   object CaixaRolagem: TScrollBox
     Left = 0
-    Height = 816
+    Height = 697
     Top = 52
     Width = 600
     HorzScrollBar.Page = 578
-    VertScrollBar.Page = 808
+    VertScrollBar.Page = 697
     Align = alClient
     BorderStyle = bsNone
-    ClientHeight = 816
-    ClientWidth = 600
+    ClientHeight = 697
+    ClientWidth = 583
     TabOrder = 0
     object Image3: TImage
       Left = 8
